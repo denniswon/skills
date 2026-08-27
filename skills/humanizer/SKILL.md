@@ -55,7 +55,7 @@ Never rewrite, reflow, spell-correct, or "improve" any of these, in either regis
 - YAML/TOML frontmatter, license headers, badges
 - Quoted material and citations — a quote is a claim about what someone said
 
-Before the first pass, mentally mask these regions. `scripts/scan.py` does the same masking, which is why its findings can be trusted not to point at code.
+Before the first pass, mentally mask these regions. `scripts/scan.py` in this skill's directory does the same masking, which is why its findings can be trusted not to point at code.
 
 ## What must survive semantically
 
@@ -74,7 +74,7 @@ Before rewriting anything longer than a few paragraphs, list the load-bearing cl
 1. Classify register; note it in one line.
 2. Build the claim list and mask the protected regions.
 3. Rewrite. Don't treat the original sentence and paragraph boundaries as fixed within whatever structural freedom the register allows — a real edit merges, splits, and cuts. A pass that only swaps words leaves the underlying model cadence intact and reads exactly as artificial as the input.
-4. Run `python scripts/scan.py <file>` (or pipe the draft in on stdin) with `--register technical|narrative`. It flags what regex can catch reliably; it does not catch cadence, so it is a floor, not a ceiling.
+4. Run `python3 scripts/scan.py <file>` from this skill's own directory, or give the absolute path to it, since the working directory is not the skill directory in every host. Pipe the draft in on stdin with `-` if it isn't a file. Pass `--register technical|narrative`. It flags what regex can catch reliably; it does not catch cadence, so it is a floor, not a ceiling.
 5. Critique your own draft against `references/patterns.md` and the claim list. Name what still sounds machine-made.
 6. Rewrite the parts the critique identified.
 7. Show the user the critique and the final text. For file input, apply the edit and show a diff of prose changes only.
