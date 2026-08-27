@@ -10,6 +10,15 @@ Most humanizers treat all prose the same. This one classifies register first, be
 npx skills add denniswon/skills
 ```
 
+Global, for a specific agent:
+
+```
+npx skills add denniswon/skills --skill humanizer -a claude-code -g
+npx skills add denniswon/skills --skill humanizer -a codex -g
+```
+
+Claude Code reads skills from `.claude/skills/`; Codex reads them from `.agents/skills/` and invokes them with `$humanizer`. Restart the agent after installing, since both scan for skills at session start.
+
 Claude Code plugin marketplace:
 
 ```
@@ -36,7 +45,7 @@ It also will not invent facts. Names, numbers, dates, and citations come from th
 ## Scanner
 
 ```
-python skills/humanizer/scripts/scan.py FILE --register technical|narrative|auto [--json]
+python3 skills/humanizer/scripts/scan.py FILE --register technical|narrative|auto [--json]
 ```
 
 Stdlib only, no network, no writes. It masks protected regions before scanning, so findings never point at anything a machine parses. Exit code 1 on findings, 0 when clean.
@@ -48,7 +57,7 @@ The scanner is a floor, not a gate. Regex catches em dashes, chatbot residue, va
 `evals/` holds eight cases and a checker that compares a rewrite against its source:
 
 ```
-python evals/check.py evals/fixtures/01-spec-excerpt.md output.md --register technical
+python3 evals/check.py evals/fixtures/01-spec-excerpt.md output.md --register technical
 ```
 
 It verifies that identifiers survive, numbers were not invented, quotations are verbatim, modality was not weakened, and structure held. See `evals/README.md`.
