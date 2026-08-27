@@ -1,0 +1,16 @@
+humanizer
+Copyright (c) 2026 Dennis Won / Newton Labs
+Licensed under the MIT License (see LICENSE).
+
+ATTRIBUTION
+
+The pattern taxonomy in skills/humanizer/references/patterns.md is derived from:
+
+1. "Signs of AI writing", English Wikipedia (WikiProject AI Cleanup),
+   licensed CC BY-SA 4.0. https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+
+2. The `humanizer` skill by blader, licensed MIT.
+   https://github.com/blader/humanizer
+
+Pattern descriptions, examples, register classification, invariant protection,
+normative-modality handling, and the scanner script are original to this work.

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "humanizer",
+  "version": "0.1.0",
+  "description": "Rewrites AI-sounding prose so it reads like a person wrote it, without changing what it says or touching code, identifiers, addresses, or normative spec language.",
+  "author": { "name": "Dennis Won" },
+  "keywords": ["humanize", "de-slop", "editing", "technical-writing", "prose"],
+  "license": "MIT"
+}
