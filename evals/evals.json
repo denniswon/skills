@@ -1,0 +1,138 @@
+{
+  "skill": "humanizer",
+  "version": "0.1.0",
+  "note": "Cases 1-5 have fixtures and are checkable with check.py. Cases 6-8 are judgment cases with no mechanical assertion; a human reads the output.",
+  "cases": [
+    {
+      "id": 1,
+      "name": "technical-spec-preserves-modality-and-structure",
+      "fixture": "fixtures/01-spec-excerpt.md",
+      "register": "technical",
+      "prompt": "Humanize this spec excerpt.",
+      "tests": "The hard case. Surface tells must go while everything load-bearing survives.",
+      "must_fix": [
+        "'serves as' -> 'is'",
+        "'it is important to note that' cut",
+        "em dash after 'operator metadata'",
+        "'could potentially' -> one modal",
+        "'not just X, it's Y' stated once",
+        "'Experts believe' named or cut",
+        "'plays a crucial role' replaced with what it does",
+        "Title Case heading -> sentence case"
+      ],
+      "must_not_break": [
+        "MUST, SHOULD, may all survive with the same force",
+        "registerOperator(address,bytes) and quorumCount unchanged",
+        "0xdeadbeefcafebabe1234 unchanged",
+        "32 ETH stays 32",
+        "the three bold-lead parameter items stay as a list: this is reference format, not a tell"
+      ],
+      "check": "python check.py fixtures/01-spec-excerpt.md OUTPUT --register technical"
+    },
+    {
+      "id": 2,
+      "name": "narrative-launch-post-full-slop",
+      "fixture": "fixtures/02-launch-post.md",
+      "register": "narrative",
+      "prompt": "Humanize this launch post.",
+      "tests": "Whether the skill restructures rather than word-swapping, and whether it invents numbers to fill the gaps it creates.",
+      "must_fix": [
+        "'marks a pivotal moment' cut",
+        "emoji removed",
+        "'At its core' and 'not just X, it's Y' cut",
+        "'delving into the landscape', 'showcase', 'harness' cut",
+        "tricolon 'faster, cheaper, and more reliable' reduced to what is supported",
+        "false range 'everything from X to Y' cut",
+        "'Let's dive in', 'Honestly?' cut",
+        "challenges-then-outlook formula and uplift ending cut",
+        "chatbot residue in the last line cut"
+      ],
+      "must_not_break": [
+        "no invented proving times, percentages, or benchmark figures: the source has none",
+        "'dropped significantly' may stay vague or be flagged as a gap, but must not become a number"
+      ],
+      "check": "python check.py fixtures/02-launch-post.md OUTPUT --register narrative"
+    },
+    {
+      "id": 3,
+      "name": "adr-keeps-rejected-options-and-quotes",
+      "fixture": "fixtures/03-adr-rejected-options.md",
+      "register": "technical",
+      "prompt": "Humanize this ADR.",
+      "tests": "Two safeguards that override the pattern list. Pattern 35 says cut invented alternatives; in an ADR the rejected options ARE the content. Quotations are inviolable even when they contain flagged words.",
+      "must_fix": [
+        "'reducing complexity and highlighting our commitment to operational simplicity' participial editorial cut"
+      ],
+      "must_not_break": [
+        "the sharding and PGA options must remain with their reasons: deleting them guts the document",
+        "Priya's quote must survive verbatim including 'delve', 'testament', and its em dash",
+        "1,200 tx/s and 200ms unchanged",
+        "the 2026-03-14 date unchanged"
+      ],
+      "check": "python check.py fixtures/03-adr-rejected-options.md OUTPUT --register technical"
+    },
+    {
+      "id": 4,
+      "name": "thin-source-must-not-fabricate",
+      "fixture": "fixtures/04-thin-post.md",
+      "register": "narrative",
+      "prompt": "Humanize this conference recap and make it engaging.",
+      "tests": "The highest-severity failure mode. The text is deliberately vague and the instruction invites color. There is nothing to add.",
+      "must_fix": [
+        "flat repetitive sentence rhythm"
+      ],
+      "must_not_break": [
+        "no conference name, city, venue, speaker, talk title, or date may appear",
+        "the correct behavior is to improve the rhythm and tell the user the post needs real detail only they have"
+      ],
+      "check": "python check.py fixtures/04-thin-post.md OUTPUT --register narrative"
+    },
+    {
+      "id": 5,
+      "name": "writing-sample-overrides-defaults",
+      "fixture": "fixtures/05-voice-sample.md",
+      "register": "narrative",
+      "prompt": "Rewrite the draft to match my writing sample above it.",
+      "tests": "Safeguard 4. The author writes in fragments and em dashes, which patterns 14 and 31 would normally strip. The sample outranks the pattern list.",
+      "must_fix": [
+        "'represents a significant advancement', 'leverages cutting-edge', 'seamless', 'robust', 'a wide range of' all cut",
+        "output should sound like the sample: short, blunt, first person"
+      ],
+      "must_not_break": [
+        "the sample's own em dashes and fragments must not be sanded off",
+        "matching the sample's fragment style in the rewrite is correct, not a violation"
+      ],
+      "check": "manual: check.py will flag em dashes in the output, which is EXPECTED here"
+    },
+    {
+      "id": 6,
+      "name": "negative-trigger-internal-research",
+      "fixture": null,
+      "register": "n/a",
+      "prompt": "Summarize this founder interview into a research brief on the company's product and roadmap, so I can decide whether to reach out.",
+      "tests": "Triggering boundary. This is a drafting request whose output is an input to the requester's own thinking.",
+      "expected": "The skill does not fire. Output is a dense brief with structure, bolded labels, and tables intact. No voice work.",
+      "check": "manual"
+    },
+    {
+      "id": 7,
+      "name": "negative-trigger-code-task",
+      "fixture": null,
+      "register": "n/a",
+      "prompt": "Refactor this Rust function to use a bounded channel and explain the backpressure trade-off.",
+      "tests": "Over-triggering on any request containing prose. The explanation is technical exposition, not a document with an audience.",
+      "expected": "The skill does not fire.",
+      "check": "manual"
+    },
+    {
+      "id": 8,
+      "name": "mixed-register-readme",
+      "fixture": null,
+      "register": "mixed",
+      "prompt": "Clean up the README for my Rust crate. The intro tells the story of why I built it, then there's an installation section and a config table.",
+      "tests": "Per-section classification. One document, two rule sets.",
+      "expected": "Narrative rules on the intro, technical rules from the installation heading down. The config table is untouched.",
+      "check": "manual"
+    }
+  ]
+}

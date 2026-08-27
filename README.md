@@ -43,9 +43,19 @@ Stdlib only, no network, no writes. It masks protected regions before scanning, 
 
 The scanner is a floor, not a gate. Regex catches em dashes, chatbot residue, vague attribution, filler, and title case. It cannot catch inflated significance or invented facts, so the skill runs a self-critique pass regardless.
 
+## Evals
+
+`evals/` holds eight cases and a checker that compares a rewrite against its source:
+
+```
+python evals/check.py evals/fixtures/01-spec-excerpt.md output.md --register technical
+```
+
+It verifies that identifiers survive, numbers were not invented, quotations are verbatim, modality was not weakened, and structure held. See `evals/README.md`.
+
 ## Status
 
-0.1.0. The rules and the scanner work. The evaluation suite in the repo has cases that have not been run against real inputs yet, so expect rough edges in short-form output.
+0.1.0. The rules and the scanner work. The eval suite has been written but not yet run end to end against every case, so expect rough edges, particularly in short-form output.
 
 ## License
 
