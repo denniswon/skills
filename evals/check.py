@@ -2,11 +2,11 @@
 """Check a humanizer rewrite against the invariants the skill promises.
 
 Compares the original and the rewrite. Most of what the skill claims is
-mechanically verifiable: identifiers survive, numbers are not invented,
-structure holds in technical register, modality is not strengthened.
+mechanically verifiable: identifiers survive, numbers and names are not invented
+or dropped, structure holds in technical register, modality is not weakened.
 
 Usage:
-    python check.py ORIGINAL REWRITE [--register technical|narrative] [--json]
+    python3 check.py ORIGINAL REWRITE [--register technical|narrative] [--json]
 
 Exit codes: 0 = all invariants hold, 1 = violations, 2 = usage error.
 Stdlib only.
@@ -29,6 +29,20 @@ LIST_ITEM = re.compile(r"(?m)^\s*[-*+]\s+")
 NUMBER = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?\s*(?:%|ETH|wei|ms|s\b|tx/s|GB|MB)?")
 MODAL = re.compile(r"\b(MUST NOT|MUST|SHOULD NOT|SHOULD|MAY|SHALL|may|can|is not guaranteed to)\b")
 QUOTED = re.compile(r"\"([^\"\n]{10,})\"")
+# Capitalized word sequences: names, places, products. Line breaks do not join tokens.
+PROPER = re.compile(r"\b([A-Z][a-zA-Z]{2,}(?:[ \t]+[A-Z][a-zA-Z]{2,})*)\b")
+LOWER_WORD = re.compile(r"\b([a-z]{3,})\b")
+COMMON_CAPS = {
+    "The", "This", "That", "These", "Those", "There", "Then", "They", "Their",
+    "And", "But", "For", "Not", "You", "Your", "Its", "Our", "Use", "Every",
+    "Each", "When", "Where", "What", "Which", "While", "With", "Without",
+    "Before", "After", "Also", "All", "Any", "One", "Two", "Three", "First",
+    "MUST", "SHOULD", "MAY", "SHALL", "NOT",
+    # Vague-attribution subjects. Pattern 5 tells the rewriter to delete these, so
+    # flagging their removal as information loss would contradict the skill.
+    "Experts", "Studies", "Research", "Many", "Some", "Most", "People", "Users",
+    "Developers", "Teams", "Companies", "Others",
+}
 
 
 def norm_numbers(text: str) -> set:
@@ -38,6 +52,33 @@ def norm_numbers(text: str) -> set:
         if tok and not re.fullmatch(r"\d{1,2}", tok):  # skip list ordinals
             out.add(re.sub(r"\s+", "", tok))
     return out
+
+
+def proper_nouns(text: str, vocabulary: set) -> set:
+    """Names, places, and products.
+
+    A capitalized token whose lowercase form appears as an ordinary word anywhere in
+    either document is capitalization, not identity: 'Registration' in a Title Case
+    heading is the same word as 'registration' in the body. That test does the work
+    a positional heuristic cannot, since real names often open a sentence.
+    """
+    body = QUOTED.sub("", text)
+    body = CODE_FENCE.sub("", body)
+    body = INLINE_CODE.sub("", body)
+    body = re.sub(r"(?m)^#{1,6} .*$", "", body)
+
+    out = set()
+    for m in PROPER.finditer(body):
+        tok = m.group(1).strip()
+        words = tok.split()
+        if all(w in COMMON_CAPS or w.lower() in vocabulary for w in words):
+            continue
+        out.add(tok)
+    return out
+
+
+def vocabulary_of(*texts: str) -> set:
+    return {w for t in texts for w in LOWER_WORD.findall(t)}
 
 
 def check(original: str, rewrite: str, register: str) -> list[dict]:
@@ -60,6 +101,16 @@ def check(original: str, rewrite: str, register: str) -> list[dict]:
     # 3. No invented numbers: every number in the rewrite must appear in the original.
     for num in norm_numbers(rewrite) - norm_numbers(original):
         fail("number-invented", num)
+
+    # 3b. Proper nouns, both directions. A name in the rewrite that is absent from the
+    # source is fabrication; a name in the source that is absent from the rewrite is
+    # information loss. Neither is visible to a reader who lacks the original.
+    vocab = vocabulary_of(original, rewrite)
+    src_names, out_names = proper_nouns(original, vocab), proper_nouns(rewrite, vocab)
+    for name in sorted(out_names - src_names):
+        fail("proper-noun-invented", name)
+    for name in sorted(src_names - out_names):
+        fail("proper-noun-dropped", name)
 
     # 4. Quoted material must survive verbatim.
     for q in QUOTED.findall(original):
