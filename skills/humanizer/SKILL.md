@@ -2,7 +2,7 @@
 name: humanizer
 description: Rewrites AI-sounding prose so it reads like a person wrote it, without changing what it says or touching code, identifiers, addresses, or normative spec language. Detects register first (technical reference vs narrative) and applies different rules to each. Use whenever the user pastes text and asks to humanize, de-slop, de-AI, tighten, or make it sound less like ChatGPT; whenever they point at a Markdown file, README, ADR, spec, RFC, audit note, launch post, blog draft, or thread and ask for a prose cleanup; whenever they say writing sounds robotic, generic, corporate, LLM-generated, or full of em dashes; AND whenever the user asks you to draft prose another person will read as prose (posts, quote-tweets, announcements, partnership or strategy docs, protocol writeups, release notes, outreach) so the draft comes out clean the first time. Do NOT use it for internal research, analysis, summaries, or briefs the requester reads to inform their own decision, where precision matters and voice does not.
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Humanizer
@@ -43,6 +43,18 @@ With no sample, default to the register: technical prose stays plain, neutral, a
 
 **Narrative register: structure is yours.** Collapse a bulleted list back into prose, merge sections, reorder for argument, cut a heading that exists only because the model felt a document needed headings. Bullet lists in a personal post are usually a model artifact — a person writing about a conference doesn't emit six parallel bullets with bolded lead-ins.
 
+## Cut before you rewrite
+
+Ask what the document would lose if a passage were deleted outright. If the answer is nothing, delete it and move on; a rewritten filler paragraph is still a filler paragraph in better clothes. Look for the restructuring that makes a whole section unnecessary rather than the one that makes it read better. Merging two paragraphs that make the same point is a stronger edit than polishing both.
+
+This has limits in technical register, where structure is preserved: propose the deletion at the end rather than performing it. In narrative register, do it.
+
+## Do not trade one register for another
+
+The common failure of de-slopping is producing prose that is obviously de-slopped. Clipped fragments, one-sentence paragraphs, manufactured punchiness, "Not X. It's Y." split across two sentences, chains of negations. That register is as identifiable as the corporate one it replaced, and a reader who has seen it twice will spot it.
+
+Concretely, in your own output: no run of three or more sentences under about six words, no more than roughly a third of sentences that short, and no paragraph that exists only to deliver a punchline. Mixed rhythm means genuinely mixed, including some long sentences that carry a full thought. The scanner reports `short_sentence_ratio` and `longest_short_run` for exactly this, and a staccato verdict there is a failure of the rewrite, not a pass.
+
 ## What must survive byte-identical
 
 Never rewrite, reflow, spell-correct, or "improve" any of these, in either register:
@@ -65,7 +77,13 @@ This creates a real tension with the anti-hedging rules below, so use this test:
 
 **Claims.** Every name, number, date, quote, benchmark, and citation must come from the source text or from the user. If a rewrite would read better with a specific detail the source doesn't have — the month, the neighborhood, the p99 latency — ask for it or leave the sentence general. Inventing a plausible number is the worst thing this skill can do.
 
+Names cut both ways. Dropping the person a claim is attributed to, or the month something happened, loses information the reader cannot recover, so a rewrite that is shorter because it is vaguer has failed. `evals/check.py` compares proper nouns in both directions for this reason.
+
 Before rewriting anything longer than a few paragraphs, list the load-bearing claims to yourself. After rewriting, walk that list against the new text. Anything dropped, added, or altered gets fixed or flagged.
+
+## If the reference files are missing
+
+An incomplete install leaves `references/patterns.md` or `scripts/scan.py` absent. Say so once, then proceed on this core list rather than refusing: em dashes, inflated significance, "serves as" for "is", "not just X but Y", forced tricolons, chatbot residue, vague attribution, filler phrases, stacked qualifiers, announced structure, fake candor, uplift endings, Title Case headings, emoji. Every safeguard in this file still applies, and the claim check matters more than usual because there is no mechanical pass to catch a changed number.
 
 ## Workflow
 
@@ -75,7 +93,7 @@ Before rewriting anything longer than a few paragraphs, list the load-bearing cl
 2. Build the claim list and mask the protected regions.
 3. Rewrite. Don't treat the original sentence and paragraph boundaries as fixed within whatever structural freedom the register allows — a real edit merges, splits, and cuts. A pass that only swaps words leaves the underlying model cadence intact and reads exactly as artificial as the input.
 4. Run `python3 scripts/scan.py <file>` from this skill's own directory, or give the absolute path to it, since the working directory is not the skill directory in every host. Pipe the draft in on stdin with `-` if it isn't a file. Pass `--register technical|narrative`. It flags what regex can catch reliably; it does not catch cadence, so it is a floor, not a ceiling.
-5. Critique your own draft against `references/patterns.md` and the claim list. Name what still sounds machine-made.
+5. Critique your own draft against `references/patterns.md` and the claim list, as questions rather than a reread. Any sentence that could be deleted without loss? Any number, name, or date that is not in the source? Any hedge cut that was about the world rather than the author? Three sentences in a row the same length? Any paragraph ending on a punchline? Any identifier or quotation altered? Name what still sounds machine-made.
 6. Rewrite the parts the critique identified.
 7. Show the user the critique and the final text. For file input, apply the edit and show a diff of prose changes only.
 
@@ -84,6 +102,10 @@ The visible critique matters: it lets the user see which changes were judgment c
 **Draft mode** (user asks you to write something new):
 
 Apply the pattern set as you compose rather than generating and then cleaning. Then run the scanner on your own draft before showing it, and fix what it finds. Don't narrate this — the user asked for a launch post, not a process report. Mention the check only if it surfaced something you deliberately kept, like an em dash inside a quotation.
+
+**Detection mode** (user asks what is wrong, not for a fix):
+
+When the request is "does this sound like AI", "what would you flag here", or the text is a spec where an unrequested rewrite is unwelcome, report and stop. List each finding with its location and why it reads as machine-made, and rewrite nothing. Offer the rewrite; do not perform it.
 
 ## The patterns
 
