@@ -5,8 +5,8 @@ Masks code fences, inline code, URLs, link targets, and frontmatter before
 scanning, so findings never point at anything a machine parses.
 
 Usage:
-    python scan.py FILE [--register technical|narrative|auto] [--json]
-    cat draft.md | python scan.py - --register narrative
+    python3 scan.py FILE [--register technical|narrative|auto] [--json]
+    cat draft.md | python3 scan.py - --register narrative
 
 Exit codes: 0 = no findings, 1 = findings, 2 = usage error.
 Stdlib only.
@@ -93,7 +93,12 @@ RULES = [
          "\"not just X, but Y\" construction", ("technical", "narrative")),
     Rule("avoid-is", r"\b(?:serves as|stands as|boasts|represents a|functions as)\b",
          "avoiding 'is'/'has'", ("technical", "narrative")),
-    Rule("false-range", r"\bfrom [^.]{3,40} to [^.]{3,40}\b(?=[,.])",
+    # A genuine measured range ("dropped from 11 minutes to 30 seconds") is not this
+    # pattern, so a change verb before it or a quantity inside it disqualifies the match.
+    Rule("false-range",
+         r"(?<!dropped )(?<!rose )(?<!fell )(?<!grew )(?<!went )(?<!increased )(?<!decreased )"
+         r"\bfrom (?![^.]{0,40}\b(?:\d|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirty|sixty)\b)"
+         r"[^.]{3,40} to [^.]{3,40}\b(?=[,.])",
          "possible false 'from X to Y' range", ("technical", "narrative"),
          confidence="low"),
 
@@ -141,6 +146,14 @@ RULES = [
          r"studies (?:show|suggest)|research (?:shows|suggests)|"
          r"some (?:argue|say)|is (?:widely|often) (?:seen|viewed) as)\b",
          "vague attribution: name the source or drop the claim",
+         ("technical", "narrative")),
+
+    # --- Output-side rules: the register a de-slopped draft falls into ---
+    Rule("not-x-period-y", r"(?:^|[.!?]\s)(?:It's not|Not) [^.!?]{2,50}[.!?]\s+(?:It's|That's|Just)\b",
+         "slop traded for staccato: 'Not X. It's Y.' split across sentences",
+         ("technical", "narrative")),
+    Rule("negation-triple", r"(?:^|[.!?]\s)No [^.!?]{1,25}\.\s+No [^.!?]{1,25}\.\s+No ",
+         "clipped negation chain ('No config. No setup. No surprises.')",
          ("technical", "narrative")),
 
     Rule("bold-lead-list", r"(?m)^\s*[-*+]\s+\*\*[^*]{1,40}:?\*\*:?\s",
@@ -205,9 +218,18 @@ def scan(original: str, register: str) -> list[Finding]:
 
 
 def cadence(original: str) -> dict:
-    """Sentence-length variance. Model prose clusters tightly around 15-22 words."""
+    """Sentence rhythm. Two failure modes, opposite directions.
+
+    Model prose clusters tightly around 15-22 words. De-slopped prose often over-
+    corrects into fragments and one-liners, which is its own recognizable register.
+    Lists, tables, and headings are excluded because their rhythm is formatting.
+    """
     prose = mask(original)
-    prose = re.sub(r"(?m)^#{1,6} .*$", "", prose)
+    prose = re.sub(r"(?m)^#{1,6} .*$", "", prose)       # headings
+    prose = re.sub(r"(?m)^\s*[-*+]\s+.*$", "", prose)    # list items
+    prose = re.sub(r"(?m)^\s*\d+\.\s+.*$", "", prose)   # numbered steps
+    prose = re.sub(r"(?m)^\s*\|.*$", "", prose)          # table rows
+    prose = re.sub(r"(?m)^\s*>.*$", "", prose)           # block quotes
     prose = prose.replace("\x00", "")
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", prose) if len(s.strip()) > 1]
     lengths = [len(s.split()) for s in sentences if len(s.split()) > 2]
@@ -215,13 +237,28 @@ def cadence(original: str) -> dict:
         return {"sentences": len(lengths), "note": "too short to assess cadence"}
     mean = statistics.mean(lengths)
     sd = statistics.pstdev(lengths)
+    short_ratio = sum(1 for n in lengths if n <= 6) / len(lengths)
+    runs, run = 0, 0
+    for n in lengths:
+        run = run + 1 if n <= 6 else 0
+        runs = max(runs, run)
+
+    if short_ratio > 0.35 or runs >= 3:
+        note = ("staccato: de-slopping has traded one detectable register for another. "
+                "Fragments and punchy one-liners are their own fingerprint")
+    elif mean and sd / mean < 0.35:
+        note = "low variance: sentence lengths are uniform, a strong model tell"
+    else:
+        note = "variance acceptable"
+
     return {
         "sentences": len(lengths),
         "mean_words": round(mean, 1),
         "stdev_words": round(sd, 1),
         "burstiness": round(sd / mean, 2) if mean else 0.0,
-        "note": ("low variance: sentence lengths are uniform, a strong model tell"
-                 if mean and sd / mean < 0.35 else "variance acceptable"),
+        "short_sentence_ratio": round(short_ratio, 2),
+        "longest_short_run": runs,
+        "note": note,
     }
 
 
